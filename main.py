@@ -1,78 +1,103 @@
 import random
 import numpy as np
+c_hours,c_teachers, c_days = 7, 30, 5
 
-c_hours, c_teachers, c_days = 7, 11, 5
 
 teachers = [f"nauczyciel_{i}" for i in range(1, c_teachers + 1)]
-classes = ["1a", "1b", "1c", "2a", "2b", "3a", "3b", "3c"]
+classes = ["1a","1b","1c","2a","2b","3a","3b","3c"]
 hours = [i for i in range(1, c_hours + 1)]
 days = [i for i in range(1, c_days + 1)]
+
 days_names = ["po", "wt", "sr", "cz", "pt"]
+subjects_names = {
+    1: "polski",
+    2: "matematyka",
+    3: "angielski",
+    4: "wf",
+    5: "biologia",
+    6: "geografia",
+    7: "chemia",
+    8: "fizyka",
+    9: "informatyka",
+    10: "historia",
+    11: "edb",
+    12: "pp",
+    13: "wos"
+}
+
+# randomowe przydzielenie przedmiotow nauczycielom. Przedmioty 1-4 (najwiecej godzin) sa przydzielane domyslnie
+def generate_random_teacher_subject():
+    teacher_subject = {}
+
+    i = 0
+    subjectsTab = [i for i in range(1, len(subjects_names) + 1)]
+    for teacher in teachers:
+        teacher_subject[teacher] = [i % 4 + 1] + random.sample(range(5, len(subjects_names) + 1), 2)
+        i += 1
+    return teacher_subject
+
+def generate_subject_teacher(teacher_subject):
+    subject_teacher = {}
+    for k, v in teacher_subject.items():
+        for s in v:
+            if s in subject_teacher:
+                subject_teacher[s].append(k)
+            else:
+                subject_teacher[s] = [k]
+    return subject_teacher
+
+teacher_subject = generate_random_teacher_subject()
+subject_teacher = dict(sorted(generate_subject_teacher(teacher_subject).items()))
+
+while len(subject_teacher) != len(subjects_names):
+    teacher_subject = generate_random_teacher_subject()
+    subject_teacher = dict(sorted(generate_subject_teacher(teacher_subject).items()))
 
 ### rozklad przedmiot i ich ilosci dla kazdej klasy
 subject_limits_1 = {
-    "polski": 3,
-    "matematyka": 3,
-    "angielski": 3,
-    "historia": 2,
-    "wos": 1,
-    "biologia": 1,
-    "geografia": 1,
-    "chemia": 1,
-    "fizyka": 1,
-    "informatyka": 1,
-    "wf": 3,
-    "edb": 1
+    1: 3,
+    2: 3,
+    3: 3,
+    4: 3,
+    5: 1,
+    6: 1,
+    7: 1,
+    8: 1,
+    9: 1,
+    10: 1,
+    11: 1,
+    12: 1
 }
 
 subject_limits_2 = {
-    "polski": 3,
-    "matematyka": 3,
-    "angielski": 3,
-    "historia": 1,
-    "biologia": 1,
-    "geografia": 1,
-    "chemia": 1,
-    "fizyka": 1,
-    "informatyka": 1,
-    "wf": 3,
-    "podstawy_przedsiebiorczosci": 1
+    1: 3,
+    2: 4,
+    3: 3,
+    4: 3,
+    5: 1,
+    6: 1,
+    7: 1,
+    8: 1,
+    9: 1,
+    10: 1,
+    11: 1,
+
+    13: 1
 }
 
 subject_limits_3 = {
-    "polski": 4,
-    "matematyka": 4,
-    "angielski": 3,
-    "historia": 1,
-    "biologia": 1,
-    "geografia": 1,
-    "chemia": 1,
-    "fizyka": 1,
-    "wf": 3
+    1: 4,
+    2: 4,
+    3: 3,
+    4: 3,
+    5: 1,
+    6: 1,
+    7: 1,
+    8: 1,
+
+    13: 2
 }
 
-teacher_subject = {
-    "nauczyciel_1": ["matematyka", "fizyka"],
-    "nauczyciel_2": ["matematyka", "chemia"],
-    "nauczyciel_3": ["polski", "wos", "historia"],
-    "nauczyciel_4": ["polski", "angielski"],
-    "nauczyciel_5": ["angielski", "polski"],
-    "nauczyciel_6": ["historia", "polski"],
-    "nauczyciel_7": ["biologia", "wf"],
-    "nauczyciel_8": ["matematyka", "geografia", "informatyka"],
-    "nauczyciel_9": ["biologia", "edb", "podstawy_przedsiebiorczosci"],
-    "nauczyciel_10": ["matematyka", "geografia"],
-    "nauczyciel_11": ["angielski", "wf"],
-}
-
-### informacje jaki nauczyciel uczy jakich przedmiotow
-subject_teacher = {}
-for k, v in teacher_subject.items():
-    for s in v:
-        if s in subject_teacher:
-            subject_teacher[s].append(k)
-        else:
-            subject_teacher[s] = [k]
 
 ###generowanie tablicy z przedmiotami ktore musza zrealizowac klasy 1,2,3
 subjects_required_1 = []
