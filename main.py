@@ -156,6 +156,33 @@ def generate_random_timetable():
             timetable.append(lesson)
     return timetable
 
+### zlikwidowanie powtarzajacych sie lekcji u teacher
+
+def teacherNoDouble(timetable, licznik=0):
+    teacher_schedule = {}
+    for lesson in timetable:
+        teacher = lesson['teacher']
+        class_name = lesson['class']
+        day = lesson['day']
+        hour = lesson['hour']
+
+        teacher_key = (teacher, day, hour)
+        teacher_schedule[teacher_key] = teacher_schedule.get(teacher_key, 0) + 1
+
+    flag = 0
+    for key, count in teacher_schedule.items():
+        if count > 1:
+            flag = 1
+            break
+
+    if flag == 1:
+        licznik += 1
+        return teacherNoDouble(generate_random_timetable(), licznik)
+    else:
+        print(f"Wykonano po {licznik} wywolaniach funkcji")
+        return timetable
+
+
 ### wypisywanie tablicy w formacie tabeli 2-wymairowej
 def write_timetable(timetable):
     posortowane = sorted(timetable, key=lambda x: x["hour"])
@@ -189,6 +216,7 @@ def write_timetable_per_class(timetable, classToW, legend):
 
 # TESTS
 initial_timetable = generate_random_timetable()
+# initial_timetable = teacherNoDouble(generate_random_timetable())
 # write_timetable(initial_timetable)
 write_timetable_per_class(initial_timetable,"1a",0)
 
