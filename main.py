@@ -214,18 +214,23 @@ def write_timetable_per_class(timetable, classToW, legend):
 
     print(tabPerClass)
 
-# TESTS
+# tworzenie table i wypis ##########################################################################
 initial_timetable = generate_random_timetable()
 # initial_timetable = teacherNoDouble(generate_random_timetable())
 # write_timetable(initial_timetable)
-write_timetable_per_class(initial_timetable,"1a",0)
+# write_timetable_per_class(initial_timetable,"1a",0)
 
 ###
 def fitness_function(timetable):
     score = 0
+    # weights of costs
+    w_teacherDoubleLesson = -100
+    w_classBreakCost = -10
+    w_teacherBreakCost = -5
 
+    ### do rozwazenia ##############################################################################
+    # Teacher conflicts: a teacher teaching more than one class at the same time
     teacher_schedule = {}
-    class_schedule = {}
     for lesson in timetable:
         teacher = lesson['teacher']
         class_name = lesson['class']
@@ -235,17 +240,52 @@ def fitness_function(timetable):
         teacher_key = (teacher, day, hour)
         teacher_schedule[teacher_key] = teacher_schedule.get(teacher_key, 0) + 1
 
-        class_key = (class_name, day, hour)
-        class_schedule[class_key] = class_schedule.get(class_key, 0) + 1
-
-    # Teacher conflicts: a teacher teaching more than one class at the same time
+    ### problem rozwiazany funkcja teacherNoDouble
+    teacherDoubleLesson = 0
     for key, count in teacher_schedule.items():
         if count > 1:
-            score -= (count - 1) * 100
+            teacherDoubleLesson += (count - 1)
+    print("Teacher more then one class at the same time:", teacherDoubleLesson)
 
-    # Class warrings: Klasa powinna mieć jak najmniej pustych lekcji w środku dnia. "-"
-    # Teacher war:Nauczyciel powinien mieć jak najmniej pustych lekcji w środku dnia.
-    # Class war: Mediana ilości lekcji w ciągu dnia zbliżona do średniej ilości lekcji w ciągu dnia.
+    score = teacherDoubleLesson * w_teacherDoubleLesson
+
+    ##############################################################################
+
+    # Class Warning: The class has as few empty activities as possible in the middle of the day. "-"
+    classBreakCost = 0
+
+    for class_name in classes:
+        table = [x for x in timetable if x["class"] == class_name]
+        table.sort(key=lambda x: x["hour"])
+        table.sort(key=lambda x: x["day"])
+
+        for i in range(len(table)):
+            if table[i]["day"] != table[i - 1]["day"]:
+                continue
+            classBreakCost += int(table[i]["hour"]) - int(table[i - 1]["hour"]) - 1
+
+    print("Class break cost:", classBreakCost)
+    score += classBreakCost * w_classBreakCost
+
+    # Teacher warning: Teacher should have as few empty lessons as possible in the middle of the day.  teacherBreakCost = 0
+    teacherBreakCost = 0
+    for teacher in teachers:
+        table = [x for x in initial_timetable if x["teacher"] == teacher]
+        table.sort(key=lambda x: x["hour"])
+        table.sort(key=lambda x: x["day"])
+
+        for i in range(len(table)):
+            if table[i]["day"] != table[i - 1]["day"] or i == 0 or int(table[i]["hour"]) - int(
+                    table[i - 1]["hour"]) == 0:
+                continue
+            teacherBreakCost += int(table[i]["hour"]) - int(table[i - 1]["hour"]) - 1
+
+    print("Teacher break cost:", teacherBreakCost)
+    score += teacherBreakCost * w_teacherBreakCost
+
+    # Class warning: The median number of lessons per day is similar to the average number of lessons per day.
+
+    return score
 
 
-fitness_function(initial_timetable)
+print("score:", fitness_function(initial_timetable))
