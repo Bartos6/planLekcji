@@ -1,10 +1,11 @@
 import random
 import numpy as np
-c_hours,c_teachers, c_days = 7, 30, 5
 
+
+c_hours, c_teachers, c_days = 7, 30, 5
 
 teachers = [f"nauczyciel_{i}" for i in range(1, c_teachers + 1)]
-classes = ["1a","1b","1c","2a","2b","3a","3b","3c"]
+classes = ["1a", "1b", "1c", "2a", "2b", "3a", "3b", "3c"]
 hours = [i for i in range(1, c_hours + 1)]
 days = [i for i in range(1, c_days + 1)]
 
@@ -25,8 +26,9 @@ subjects_names = {
     13: "wos"
 }
 
+
 # randomowe przydzielenie przedmiotow nauczycielom. Przedmioty 1-4 (najwiecej godzin) sa przydzielane domyslnie
-def generate_random_teacher_subject():
+def generate_random_teacher_subject_Beta():
     teacher_subject = {}
 
     i = 0
@@ -46,12 +48,16 @@ def generate_subject_teacher(teacher_subject):
                 subject_teacher[s] = [k]
     return subject_teacher
 
-teacher_subject = generate_random_teacher_subject()
-subject_teacher = dict(sorted(generate_subject_teacher(teacher_subject).items()))
-
-while len(subject_teacher) != len(subjects_names):
-    teacher_subject = generate_random_teacher_subject()
+def generate_teacher_subject_relation():
+    teacher_subject = generate_random_teacher_subject_Beta()
     subject_teacher = dict(sorted(generate_subject_teacher(teacher_subject).items()))
+
+    while len(subject_teacher) != len(subjects_names):
+        teacher_subject = generate_random_teacher_subject_Beta()
+        subject_teacher = dict(sorted(generate_subject_teacher(teacher_subject).items()))
+    return teacher_subject, subject_teacher
+
+teacher_subject, subject_teacher = generate_teacher_subject_relation()
 
 ### rozklad przedmiot i ich ilosci dla kazdej klasy
 subject_limits_1 = {
@@ -97,7 +103,6 @@ subject_limits_3 = {
 
     13: 2
 }
-
 
 ###generowanie tablicy z przedmiotami ktore musza zrealizowac klasy 1,2,3
 subjects_required_1 = []
@@ -156,6 +161,7 @@ def generate_random_timetable():
             timetable.append(lesson)
     return timetable
 
+
 ### zlikwidowanie powtarzajacych sie lekcji u teacher
 
 def teacherNoDouble(timetable, licznik=0):
@@ -201,24 +207,20 @@ def write_timetable_per_class(timetable, classToW, legend):
     table.sort(key=lambda x: x["hour"])
     table.sort(key=lambda x: x["day"])
     if legend == True:
-        tabPerClass = np.full((c_hours+1, c_days+1), "-", dtype=object)
+        tabPerClass = np.full((c_hours + 1, c_days + 1), "-", dtype=object)
         tabPerClass[0, 1:] = days_names
         tabPerClass[1:, 0] = np.arange(1, 8)
     else:
         tabPerClass = np.full((c_hours, c_days), "-", dtype=object)
 
-
     print("\tKlasa:", classToW)
     for lesson in table:
-        tabPerClass[int(lesson['hour'])-1+legend][int(lesson['day'])-1+legend] = lesson['subject']
+        tabPerClass[int(lesson['hour']) - 1 + legend][int(lesson['day']) - 1 + legend] = lesson['subject']
 
     print(tabPerClass)
 
-# tworzenie table i wypis ##########################################################################
-initial_timetable = generate_random_timetable()
-# initial_timetable = teacherNoDouble(generate_random_timetable())
-# write_timetable(initial_timetable)
-# write_timetable_per_class(initial_timetable,"1a",0)
+
+
 
 ###
 def fitness_function(timetable):
@@ -227,6 +229,7 @@ def fitness_function(timetable):
     w_teacherDoubleLesson = -100
     w_classBreakCost = -10
     w_teacherBreakCost = -5
+    w_numberOfLessonsPerDayCost = -5
 
     ### do rozwazenia ##############################################################################
     # Teacher conflicts: a teacher teaching more than one class at the same time
@@ -245,7 +248,6 @@ def fitness_function(timetable):
     for key, count in teacher_schedule.items():
         if count > 1:
             teacherDoubleLesson += (count - 1)
-    print("Teacher more then one class at the same time:", teacherDoubleLesson)
 
     score = teacherDoubleLesson * w_teacherDoubleLesson
 
@@ -264,7 +266,6 @@ def fitness_function(timetable):
                 continue
             classBreakCost += int(table[i]["hour"]) - int(table[i - 1]["hour"]) - 1
 
-    print("Class break cost:", classBreakCost)
     score += classBreakCost * w_classBreakCost
 
     # Teacher warning: Teacher should have as few empty lessons as possible in the middle of the day.  teacherBreakCost = 0
@@ -280,12 +281,39 @@ def fitness_function(timetable):
                 continue
             teacherBreakCost += int(table[i]["hour"]) - int(table[i - 1]["hour"]) - 1
 
-    print("Teacher break cost:", teacherBreakCost)
     score += teacherBreakCost * w_teacherBreakCost
 
     # Class warning: The median number of lessons per day is similar to the average number of lessons per day.
+    numberOfLessonsPerDayCost = 0
+    classPerDay = {}
+
+    for lesson in initial_timetable:
+        classPerDay[(lesson['class'], lesson['day'])] = classPerDay.get((lesson['class'], lesson['day']), 0) + 1
+
+    class_lessonPerDay = {}
+    for (class_name, day), number in sorted(classPerDay.items()):
+        if class_name not in class_lessonPerDay:
+            class_lessonPerDay[class_name] = []
+        class_lessonPerDay[class_name].append(number)
+
+    for class_name, tabNumber in class_lessonPerDay.items():
+        mean = np.mean(tabNumber)
+        median = np.median(tabNumber)
+        if mean != median:
+            if mean > median:
+                numberOfLessonsPerDayCost += mean - median
+            else:
+                numberOfLessonsPerDayCost += median - mean
+    numberOfLessonsPerDayCost *= 10
+    score += numberOfLessonsPerDayCost * w_numberOfLessonsPerDayCost
 
     return score
 
 
+# tworzenie table  ##########################################################################
+# initial_timetable = generate_random_timetable()
+
+initial_timetable = teacherNoDouble(generate_random_timetable())
+# write_timetable(initial_timetable)
+# write_timetable_per_class(initial_timetable,"1a",0)
 print("score:", fitness_function(initial_timetable))
