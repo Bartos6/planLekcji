@@ -226,12 +226,30 @@ def write_timetable_per_class(timetable, classToW, legend):
 def fitness_function(timetable):
     score = 0
     # weights of costs
+    w_classDoubleLesson = -100
     w_teacherDoubleLesson = -100
     w_classBreakCost = -10
     w_teacherBreakCost = -5
     w_numberOfLessonsPerDayCost = -5
 
-    ### do rozwazenia ##############################################################################
+    # Class conflicts: a class have more than one lesson at the same time
+    class_schedule = {}
+    for lesson in timetable:
+        teacher = lesson['teacher']
+        class_name = lesson['class']
+        day = lesson['day']
+        hour = lesson['hour']
+
+        class_key = (class_name, day, hour)
+        class_schedule[class_key] = class_schedule.get(class_key, 0) + 1
+
+    classDoubleLesson = 0
+    for key, count in class_schedule.items():
+        if count > 1:
+            classDoubleLesson += (count - 1)
+
+    score = classDoubleLesson * w_classDoubleLesson
+
     # Teacher conflicts: a teacher teaching more than one class at the same time
     teacher_schedule = {}
     for lesson in timetable:
@@ -243,16 +261,12 @@ def fitness_function(timetable):
         teacher_key = (teacher, day, hour)
         teacher_schedule[teacher_key] = teacher_schedule.get(teacher_key, 0) + 1
 
-    ### problem rozwiazany funkcja teacherNoDouble
     teacherDoubleLesson = 0
     for key, count in teacher_schedule.items():
         if count > 1:
             teacherDoubleLesson += (count - 1)
 
     score = teacherDoubleLesson * w_teacherDoubleLesson
-
-    ##############################################################################
-
     # Class Warning: The class has as few empty activities as possible in the middle of the day. "-"
     classBreakCost = 0
 
@@ -304,16 +318,18 @@ def fitness_function(timetable):
                 numberOfLessonsPerDayCost += mean - median
             else:
                 numberOfLessonsPerDayCost += median - mean
-    numberOfLessonsPerDayCost *= 10
+    numberOfLessonsPerDayCost *= 100
     score += numberOfLessonsPerDayCost * w_numberOfLessonsPerDayCost
 
     return score
 
 
 # tworzenie table  ##########################################################################
-# initial_timetable = generate_random_timetable()
+initial_timetable = generate_random_timetable()
 
-initial_timetable = teacherNoDouble(generate_random_timetable())
+# initial_timetable = teacherNoDouble(generate_random_timetable())
 # write_timetable(initial_timetable)
 # write_timetable_per_class(initial_timetable,"1a",0)
 print("score:", fitness_function(initial_timetable))
+
+
