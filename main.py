@@ -1,11 +1,27 @@
 import random
 import numpy as np
+import statistics
+import copy
+
+c_hours, c_teachers, c_days, c_class = 7, 100, 5, 3
+class_range = 3
 
 
-c_hours, c_teachers, c_days = 7, 30, 5
+def generate_classes(c_class, class_range):
+    classes = []
+    names = list('abcdefghijklmnopqrstuvwxyz')
+
+    for i in range(c_class):
+        grade = str(random.randint(1,class_range))
+        j = 0
+        while grade + names[j] in classes and j < len(names)-1:
+            j += 1
+
+        classes.append(grade + names[j])
+    return sorted(classes)
 
 teachers = [f"nauczyciel_{i}" for i in range(1, c_teachers + 1)]
-classes = ["1a", "1b", "1c", "2a", "2b", "3a", "3b", "3c"]
+classes = generate_classes(c_class, class_range)
 hours = [i for i in range(1, c_hours + 1)]
 days = [i for i in range(1, c_days + 1)]
 
@@ -219,8 +235,7 @@ def write_timetable_per_class(timetable, classToW, legend):
 
     print(tabPerClass)
 
-
-###
+## funkcja obliczajaca max funkcji
 def fitness_function(timetable):
     score = 0
     # weights of costs
@@ -283,7 +298,7 @@ def fitness_function(timetable):
     # Teacher warning: Teacher should have as few empty lessons as possible in the middle of the day.  teacherBreakCost = 0
     teacherBreakCost = 0
     for teacher in teachers:
-        table = [x for x in initial_timetable if x["teacher"] == teacher]
+        table = [x for x in timetable if x["teacher"] == teacher]
         table.sort(key=lambda x: x["hour"])
         table.sort(key=lambda x: x["day"])
 
@@ -299,7 +314,7 @@ def fitness_function(timetable):
     numberOfLessonsPerDayCost = 0
     classPerDay = {}
 
-    for lesson in initial_timetable:
+    for lesson in timetable:
         classPerDay[(lesson['class'], lesson['day'])] = classPerDay.get((lesson['class'], lesson['day']), 0) + 1
 
     class_lessonPerDay = {}
@@ -322,13 +337,11 @@ def fitness_function(timetable):
     return score
 
 
-
-def crossover(parent1, parent2):
-    cut_day = random.randint(1, c_days-1)
+def crossover(parent1, parent2, crossover_rate=0.1):
     child = []
 
     for p1, p2 in zip(parent1, parent2):
-      if int(p1['day']) <= cut_day:
+      if random.random() < crossover_rate:
           child.append(p1)
       else:
           child.append(p2)
@@ -346,12 +359,12 @@ def mutate_teacher(timetable, mutation_rate=0.1):
 
 
 def mutate_swap_lessons(timetable, mutation_rate=0.1):
-    mutate_table = [lesson.copy() for lesson in initial_timetable]
+    mutate_table = [lesson.copy() for lesson in timetable]
     startId, endId, temp = 0, 0, 0
     for i in range(len(mutate_table)):
         endId = len(subjects_required[int(mutate_table[i]["class"][0]) - 1]) + temp - 1
 
-        if random.random() < 0.1:
+        if random.random() < mutation_rate:
             swapId = random.randint(startId, endId)
             mutate_table[i]["subject"], mutate_table[swapId]["subject"] = mutate_table[swapId]["subject"], \
                                                                           mutate_table[i]["subject"]
@@ -363,16 +376,57 @@ def mutate_swap_lessons(timetable, mutation_rate=0.1):
     return mutate_table
 
 
-# tworzenie table  ##########################################################################
-initial_timetable = generate_random_timetable()
-initial_timetable2 = generate_random_timetable()
+def genetic_algorithm(POPULATION_SIZE = 100, NUM_GENERATIONS = 500, CROSSOVER_RATE = 0.5, MUTATION_RATE = 0.1):
+
+    population = [generate_random_timetable() for _ in range(POPULATION_SIZE)]
+
+    best_individual = None
+    best_fitness = -float('inf')
+
+    fitness_history = []
+
+    for generation in range(NUM_GENERATIONS):
+        evaluated_population = []
+        for individual in population:
+            fitness = fitness_function(individual)
+            evaluated_population.append((fitness, individual))
+
+        evaluated_population.sort(key=lambda x: x[0], reverse=True)
+
+        current_best_fitness, current_best_individual = evaluated_population[0]
+        if current_best_fitness > best_fitness:
+            best_fitness = current_best_fitness
+            best_individual = copy.deepcopy(current_best_individual)
+
+        fitness_history.append(best_fitness)
+
+        num_elites = int(POPULATION_SIZE * 0.1)
+        parents = [ind for _, ind in evaluated_population[:num_elites]]
+
+        next_generation = []
+
+        while len(next_generation) < POPULATION_SIZE:
+            parent1 = random.choice(parents)
+            parent2 = random.choice(parents)
+
+            child1 = crossover(parent1, parent2, CROSSOVER_RATE)
+            child2 = crossover(parent2, parent1, CROSSOVER_RATE)
+
+            if random.random() < 0.5:
+                child1 = mutate_swap_lessons(child1, MUTATION_RATE)
+                child2 = mutate_swap_lessons(child2, MUTATION_RATE)
+            else:
+                child1 = mutate_teacher(child1, MUTATION_RATE)
+                child2 = mutate_teacher(child2, MUTATION_RATE)
+
+            next_generation.append(child1)
+            if len(next_generation) < POPULATION_SIZE:  # Ensure not to exceed population size
+                next_generation.append(child2)
+
+        population = next_generation
+
+    return best_individual, best_fitness
 
 
-child = crossover(initial_timetable,initial_timetable2)
-
-a = initial_timetable.copy()
-b = mutate_swap_lessons(a)
-
-
-
-print("score:", fitness_function(child))
+best_individual, best_fitness = genetic_algorithm(100, 500, 0.5, 0.1)
+print(f"\nBest fitness: {best_fitness}")
