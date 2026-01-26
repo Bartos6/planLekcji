@@ -220,8 +220,6 @@ def write_timetable_per_class(timetable, classToW, legend):
     print(tabPerClass)
 
 
-
-
 ###
 def fitness_function(timetable):
     score = 0
@@ -324,12 +322,57 @@ def fitness_function(timetable):
     return score
 
 
+
+def crossover(parent1, parent2):
+    cut_day = random.randint(1, c_days-1)
+    child = []
+
+    for p1, p2 in zip(parent1, parent2):
+      if int(p1['day']) <= cut_day:
+          child.append(p1)
+      else:
+          child.append(p2)
+    return child
+
+
+def mutate_teacher(timetable, mutation_rate=0.1):
+    mutate_table = [lesson.copy() for lesson in timetable]
+
+    for lesson in mutate_table:
+        if random.random() < mutation_rate:
+            lesson['teacher'] = random.choice(subject_teacher[lesson["subject"]])
+
+    return mutate_table
+
+
+def mutate_swap_lessons(timetable, mutation_rate=0.1):
+    mutate_table = [lesson.copy() for lesson in initial_timetable]
+    startId, endId, temp = 0, 0, 0
+    for i in range(len(mutate_table)):
+        endId = len(subjects_required[int(mutate_table[i]["class"][0]) - 1]) + temp - 1
+
+        if random.random() < 0.1:
+            swapId = random.randint(startId, endId)
+            mutate_table[i]["subject"], mutate_table[swapId]["subject"] = mutate_table[swapId]["subject"], \
+                                                                          mutate_table[i]["subject"]
+
+        if i == endId:
+            startId = endId + 1
+            temp += len(subjects_required[int(mutate_table[i]["class"][0]) - 1])
+
+    return mutate_table
+
+
 # tworzenie table  ##########################################################################
 initial_timetable = generate_random_timetable()
-
-# initial_timetable = teacherNoDouble(generate_random_timetable())
-# write_timetable(initial_timetable)
-# write_timetable_per_class(initial_timetable,"1a",0)
-print("score:", fitness_function(initial_timetable))
+initial_timetable2 = generate_random_timetable()
 
 
+child = crossover(initial_timetable,initial_timetable2)
+
+a = initial_timetable.copy()
+b = mutate_swap_lessons(a)
+
+
+
+print("score:", fitness_function(child))
